@@ -3,6 +3,49 @@ from utils import printUtil
 
 Printer_=printUtil.Printer()
 
+def Chunk_divide(PngData):
+    seek=8
+    sig=PngData[:seek]    # Signature, 8 bytes 
+    
+    chunkLength=None      # Chunk Body Legnth, 4 bytes
+    chunkName=None        # Chunk Name, 4 bytes
+    chunkBody=None        # Chunk Body, ChunkLength Bytes
+    chunkCrc=None         # CRC
+
+    nextChunkName=None
+    index=0
+    allChunkDict={}
+    nowChunkDict={}
+
+    while(chunkName != b'IEND'):
+        chunkLength = int.from_bytes(PngData[seek:seek+4],byteorder='big')
+        seek=seek+4
+
+        chunkName = PngData[seek:seek+4]
+        seek=seek+4
+
+        chunkBody= PngData[seek:seek+chunkLength]
+        seek=seek+chunkLength
+
+        chunkCrc= PngData[seek:seek+4]
+        seek=seek+4
+        
+        nowChunkDict["length"] = chunkLength
+        nowChunkDict["name"] = chunkName
+        nowChunkDict["body"] = chunkBody
+        nowChunkDict["crc"] = chunkCrc
+        copyDict = nowChunkDict.copy()
+
+        allChunkDict[index]= copyDict
+        index+=1
+ 
+    return sig,allChunkDict
+
+
+
+
+
+
 def All_Chunk_Viwer(AllChunkDict):
 
     Printer_.functionCall("Chunk Summary ") # Summary 
@@ -32,7 +75,7 @@ def All_Chunk_Viwer(AllChunkDict):
         if(chunk.get('length')>=10):
             print(f"\t\t[*] Chunk Body : {chunk.get('body')[:10]}...")
         else:
-            print(f"\t\t[*] Chunk Body : {chunk.get('body')}...")
+            print(f"\t\t[*] Chunk Body : {chunk.get('body')}")
 
         print(f"\t\t[*] Chunk Crc : {chunk.get('crc')}")
 
@@ -40,7 +83,9 @@ def All_Chunk_Viwer(AllChunkDict):
             print(f"\t\t[*] Description: {ChunkDesc.get(chunk.get('name').decode())}")
         else:
             print("Error Unkown Chunk Name")
-
+        if (CRC_Check(chunk.get('name')+chunk.get('body'),chunk.get('crc'))):
+            print(f"\t\t[*] CRC Check .. OK ")
+        
 
 def Read_IHDR(ChunkDict):
  
@@ -73,7 +118,6 @@ def Read_IHDR(ChunkDict):
     print(f"\t[*] Compression : {Compression}")
     print(f"\t[*] Filter : {Filter}")
     print(f"\t[*] Interlace : {Interlace}")
-    CRC_Check(IHDR_Body,CRC)
 
 
 def CRC_Check(chunkData,CRC):
