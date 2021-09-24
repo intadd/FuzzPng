@@ -45,11 +45,11 @@ def All_Chunk_Viwer(AllChunkDict):
 def Read_IHDR(ChunkDict):
  
     chunkLength= ChunkDict.get("length")
-    IHDR_Signitaure = ChunkDict.get("name")
+    IHDR_Signature = ChunkDict.get("name")
     IHDR_Body= ChunkDict.get("body")
     IHDR_Crc = ChunkDict.get("crc")
 
-    if(IHDR_Signitaure == b"IHDR" or chunkLength == 13):
+    if(IHDR_Signature == b"IHDR" or chunkLength == 13):
         Printer_.functionCall("PNG INFO - IHDR Chunk") # Summary 
  
     else:

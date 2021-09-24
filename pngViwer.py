@@ -3,7 +3,7 @@ from utils.pngUtil import *
 
 def Chunk_divide(PngData):
     seek=8
-    sig=PngData[:seek]    # Signitarue, 8 bytes
+    sig=PngData[:seek]    # Signature, 8 bytes 
     
     chunkLength=None      # Chunk Body Legnth, 4 bytes
     chunkName=None        # Chunk Name, 4 bytes
@@ -42,8 +42,9 @@ def Chunk_divide(PngData):
 def main():
     print(" RUN OK = ) ")
 
-    target= "./DummyPng/test_case1.png"
- 
+    #targetList= [ "./DummyPng/24_bit.png", "./DummyPng/8_bit.png",  "./DummyPng/4_bit.png",  "./DummyPng/1_bit.png"]
+    target = "./DummyPng/test_case1.png" 
+
     try:
         with open(target, "rb") as f:
             PngBytes=f.read()
@@ -51,8 +52,7 @@ def main():
     except Exception as e:
         print(f"ERROR : {e}")
 
-
-    Signitarue,chunkDict=Chunk_divide(PngBytes)
+    Signature,chunkDict=Chunk_divide(PngBytes)
     Read_IHDR(chunkDict.get(0))
     All_Chunk_Viwer(chunkDict)
 
