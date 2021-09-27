@@ -161,7 +161,6 @@ def decompress(chunkDict):
         if(oneChunk.get('name') == b'IDAT'): # 각각의 IDAT 청크의 body Concat함
             print(f"IDAT Chunk Bytes Length: {len(oneChunk.get('body'))}")
             idatBody+= oneChunk.get('body') #Concat
-    print(len(idatBody))
     ImageData = zlib.decompress(idatBody) # IDAT decompress
     print(f"IDAT Chunk Decompress Bytes Length:{len(ImageData)}")
     print("="*20)

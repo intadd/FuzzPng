@@ -20,21 +20,6 @@ def main():
     IHDR=Read_IHDR(chunkDict.get(0))
     All_Chunk_Viwer(chunkDict)
     decompress(chunkDict)
-
-    outputPath='./output/'
-
-    for i in range(0,50):
-
-        newChunkList=[]
-        newIdatChunk=newRandomIDAT(IHDR,chunkDict)
-        for originChunk in chunkDict.values():
-            if(originChunk.get('name') == b"IDAT"):
-                newChunkList.append(newIdatChunk)
-            else:
-                newChunkList.append(originChunk)
-        PNG_path= os.path.join(outputPath,f"{i}.png")
-        Chunk_combine(newChunkList,PNG_path)
-
         
 
     '''
