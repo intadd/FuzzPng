@@ -1,12 +1,12 @@
 import zlib
 from utils import printUtil
+import random
 
 Printer_=printUtil.Printer()
 
 def Chunk_divide(PngData):
     seek=8
     sig=PngData[:seek]    # Signature, 8 bytes 
-    
     chunkLength=None      # Chunk Body Legnth, 4 bytes
     chunkName=None        # Chunk Name, 4 bytes
     chunkBody=None        # Chunk Body, ChunkLength Bytes
@@ -18,19 +18,20 @@ def Chunk_divide(PngData):
     nowChunkDict={}
 
     while(chunkName != b'IEND'):
-        chunkLength = int.from_bytes(PngData[seek:seek+4],byteorder='big')
+        chunkLengthInt = int.from_bytes(PngData[seek:seek+4],byteorder='big')
+        chunkLengthByte = PngData[seek:seek+4]
         seek=seek+4
 
         chunkName = PngData[seek:seek+4]
         seek=seek+4
 
-        chunkBody= PngData[seek:seek+chunkLength]
-        seek=seek+chunkLength
+        chunkBody= PngData[seek:seek+chunkLengthInt]
+        seek=seek+chunkLengthInt
 
         chunkCrc= PngData[seek:seek+4]
         seek=seek+4
         
-        nowChunkDict["length"] = chunkLength
+        nowChunkDict["length"] = chunkLengthByte
         nowChunkDict["name"] = chunkName
         nowChunkDict["body"] = chunkBody
         nowChunkDict["crc"] = chunkCrc
@@ -40,11 +41,6 @@ def Chunk_divide(PngData):
         index+=1
  
     return sig,allChunkDict
-
-
-
-
-
 
 def All_Chunk_Viwer(AllChunkDict):
 
@@ -67,12 +63,12 @@ def All_Chunk_Viwer(AllChunkDict):
         print(f"{chunkName}:{count}",end=', ')
     print() 
 
-
     Printer_.functionCall("Chunk Detail")     # All Chunk Print
     for index,chunk in enumerate (AllChunkDict.values()):
         Printer_.red(f"\t{index}, Chunk Name : {chunk.get('name').decode()}")
         print(f"\t\t[*] Chunk Body Length : {chunk.get('length')}")
-        if(chunk.get('length')>=10):
+
+        if(int.from_bytes(chunk.get('length'),byteorder='big')>=10):
             print(f"\t\t[*] Chunk Body : {chunk.get('body')[:10]}...")
         else:
             print(f"\t\t[*] Chunk Body : {chunk.get('body')}")
@@ -83,9 +79,10 @@ def All_Chunk_Viwer(AllChunkDict):
             print(f"\t\t[*] Description: {ChunkDesc.get(chunk.get('name').decode())}")
         else:
             print("Error Unkown Chunk Name")
+        
         if (CRC_Check(chunk.get('name')+chunk.get('body'),chunk.get('crc'))):
             print(f"\t\t[*] CRC Check .. OK ")
-        
+
 
 def Read_IHDR(ChunkDict):
  
@@ -119,12 +116,118 @@ def Read_IHDR(ChunkDict):
     print(f"\t[*] Filter : {Filter}")
     print(f"\t[*] Interlace : {Interlace}")
 
+    IHDR={}
+    IHDR['width']=PNG_width
+    IHDR['height']=PNG_height
+    IHDR['color']=PNG_color_type
+    IHDR['bitDepth']=PNG_bit_depth
+
+    return IHDR 
+
+def make_ChunkDict(Length,Name,Body):
+    oneChunk={}
+    oneChunk["length"]= Length
+    oneChunk["name"] = Type
+    oneChunk["body"] = Data
+    make_crc= CRC_make(Type+Data)
+    oneChunk["crc"] =  make_crc
+    return oneChunk
+
+def Chunk_combine(chunkList,path):
+    newPNG=b'\x89PNG\r\n\x1a\n' #sig
+
+    for oneChunkDict in chunkList:
+        for data in oneChunkDict.values():
+            newPNG+=data
+
+    newFile = open(path, "wb")
+    newFile.write(newPNG)
+
+
+def CRC_make(chunkData):
+    return zlib.crc32(chunkData).to_bytes(4, byteorder="big")
+
+
 
 def CRC_Check(chunkData,CRC):
     if(zlib.crc32(chunkData) == int.from_bytes(CRC,byteorder='big')):
         return True
     else:
         return False
+
+def decompress(chunkDict):
+    idatBody=b''
+    for oneChunk in chunkDict.values():
+        if(oneChunk.get('name') == b'IDAT'): # 각각의 IDAT 청크의 body Concat함
+            print(f"IDAT Chunk Bytes Length: {len(oneChunk.get('body'))}")
+            idatBody+= oneChunk.get('body') #Concat
+    print(len(idatBody))
+    ImageData = zlib.decompress(idatBody) # IDAT decompress
+    print(f"IDAT Chunk Decompress Bytes Length:{len(ImageData)}")
+    print("="*20)
+    Printer_.red(f"IDAT Chunks (Compresed) :")
+    print(idatBody)
+    print("="*20)
+    Printer_.yellow(f"Image Raw :")
+    print(ImageData)
+    print("="*20)
+    Printer_.green("Image Raw (int-array):")
+    width=5
+    height=5
+    channel=3
+    seek=0
+    oneRowBytesLength= channel *(width) +1 # 한줄 당 들어가는 bytes 수 
+
+    png_idat_raw=[ x for x in ImageData ]
+    print("== Origin == ")
+    for row in range(0, len(png_idat_raw)//oneRowBytesLength):
+        print(png_idat_raw[seek:seek+oneRowBytesLength])
+        seek+=oneRowBytesLength
+
+
+def newRandomIDAT(IHDR, allChunkDict):
+    width=IHDR.get('width')
+    height=IHDR.get("height")
+    colorType=IHDR.get("color")
+    bitDepth=int(IHDR.get("bitDepth"))
+
+    if(colorType==2):
+        channel=3* (bitDepth//8)
+
+    oneRowBytesLength= channel *(width) +1 # 한줄 당 들어가는 bytes 수 
+
+    print("== New == ")
+    new_idat_rat=[]
+    seek = 0 
+    new_idat=[]
+    for row in range(0, height):
+        oneRow=[]
+        for index in range(0,oneRowBytesLength-1): #random 
+            oneRow.append(random.randint(0,255))
+        oneRow.insert(0,0) # filter 기입
+        print(oneRow)
+        new_idat_rat.extend(oneRow)
+
+    name=b'IDAT'
+    newBody= compress(bytes(bytearray(new_idat_rat)))
+    make_crc= CRC_make(name+newBody)
+
+    oneChunk={}
+    oneChunk["length"]= len(newBody).to_bytes(4, byteorder="big")
+    oneChunk["name"] = b'IDAT'
+    oneChunk["body"] = newBody
+    oneChunk["crc"] =  make_crc
+
+    return oneChunk
+
+
+
+
+def compress(RawImageData):
+    NewCompress =  zlib.compress(RawImageData,-1)
+
+    return NewCompress 
+
 
 # Color Type in IHDR Chunk Options
 Color={
